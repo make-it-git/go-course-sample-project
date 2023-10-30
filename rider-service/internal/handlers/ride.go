@@ -10,16 +10,18 @@ import (
 )
 
 type RideImpl struct {
-	log logger.Log
-	now now_time.NowType
+	log          logger.Log
+	orderService OrderService
+	now          now_time.NowType
 }
 
 var _ rider.ServerInterface = (*RideImpl)(nil)
 
-func New(log logger.Log, now now_time.NowType) *RideImpl {
+func New(log logger.Log, now now_time.NowType, orderService OrderService) *RideImpl {
 	return &RideImpl{
-		log: log,
-		now: now,
+		log:          log,
+		orderService: orderService,
+		now:          now,
 	}
 }
 

@@ -10,13 +10,17 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 
 	"rider-service/internal/config"
+	"rider-service/internal/db/repository"
 	rider "rider-service/internal/generated/schema"
 	"rider-service/internal/handlers"
 	"rider-service/internal/logger"
 	"rider-service/internal/now_time"
+	"rider-service/internal/services/order"
+	"rider-service/internal/services/price_estimator"
 )
 
 func main() {
@@ -27,7 +31,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	handle := handlers.New(log, now_time.Get)
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, cfg.DatabaseUrl)
+	if err != nil {
+		log.WithError(err, "database connect")
+		os.Exit(1)
+	}
+	defer conn.Close(ctx)
+
+	priceEstimator := price_estimator.NewPriceEstimatorService()
+	orderRepository := repository.NewOrderRepository(conn)
+	orderService := order.NewOrderService(orderRepository, priceEstimator, now_time.Get)
+
+	handle := handlers.New(log, now_time.Get, orderService)
 
 	r := chi.NewRouter()
 	swagger, err := rider.GetSwagger()
@@ -62,7 +78,7 @@ func main() {
 	<-done
 	log.Info("Listen stopped")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer func() {
 		cancel()
 	}()

@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	ListenAddr string `mapstructure:"LISTEN_ADDR"`
-	ListenPort int    `mapstructure:"LISTEN_PORT"`
-	Env        string `mapstructure:"ENV"`
+	ListenAddr  string `mapstructure:"LISTEN_ADDR"`
+	ListenPort  int    `mapstructure:"LISTEN_PORT"`
+	Env         string `mapstructure:"ENV"`
+	DatabaseUrl string `mapstructure:"DATABASE_URL"`
 }
 
 func (c Config) ListenAddrAndPort() string {
@@ -21,6 +22,7 @@ func FromEnv() (*Config, error) {
 	v.SetDefault("LISTEN_ADDR", "127.0.0.1")
 	v.SetDefault("LISTEN_PORT", 8000)
 	v.SetDefault("ENV", "local")
+	v.SetDefault("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/postgres")
 	v.SetConfigType("env")
 	v.AutomaticEnv()
 

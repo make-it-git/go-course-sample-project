@@ -45,11 +45,11 @@ components:
           $ref: '#/components/schemas/Location'
         created_at:
           type: string
-          format: date
+          format: datetime
           description: The date and time the ride order was created
         completed_at:
           type: string
-          format: date
+          format: datetime
           description: The date and time the ride order was completed
         total_price:
           type: integer

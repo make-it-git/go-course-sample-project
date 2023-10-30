@@ -16,7 +16,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // CreateOrder defines model for CreateOrder.
@@ -40,11 +39,11 @@ type Location struct {
 // Order defines model for Order.
 type Order struct {
 	// CompletedAt The date and time the ride order was completed
-	CompletedAt *openapi_types.Date `json:"completed_at,omitempty"`
+	CompletedAt *string `json:"completed_at,omitempty"`
 
 	// CreatedAt The date and time the ride order was created
-	CreatedAt       openapi_types.Date `json:"created_at"`
-	DropoffLocation Location           `json:"dropoff_location"`
+	CreatedAt       string   `json:"created_at"`
+	DropoffLocation Location `json:"dropoff_location"`
 
 	// Id The ID of the ride order
 	Id             string   `json:"id"`
@@ -322,17 +321,17 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 var swaggerSpec = []string{
 
 	"H4sIAAAAAAAC/7xV3U7bTBB9ldV836VJQmlvfEdLVUVCAqFWqoRQtNjjZMH7w+yYNkJ+92p3QxwnJuVP",
-	"vYvj2TNnzjmzfoDCamcNGvaQP4CTJDUyUnz6efDDIx1MT8KDMpDDAmWJBBkYqRHyjYoMCO8aRVhCztRg",
-	"Br5YoJbhqFZG6UZDfpgBL104qAzjHAnatn2sjC2/EErGMwpdAh+yDokVxpclWWeralbbQrKyJvz3P2EF",
-	"Ofw37gYZr/DGp491bQaqRO0soymWs1tchqMrKp5JmXmocaq4bdwr4NvN6S93eu0iZ7uzXK21sdc3WHAg",
-	"9JXIDuig0Xs5x4EZ2gGQ041x+ji1ZMVNuQlkGn0dbMmgtmb+1Nutedc4m6eG5nnC16BtjYzlTHL0GX1B",
-	"yiXS8H2BopSMQppSsNIoeIGCVInCBjzxS3qxhoAMKks6AEE4Bdmuz0UM2Vu6JYDn9HpbZof5TU+ErbZ4",
-	"DfV+dZ4zYMuynjlSBQ5ziAUiFuwj0+359oo8byt6ZvVp7QYsNFGmsruMj404Pp+KylIiqMxcsPytfMBU",
-	"XAeUi0A/JjTUQgb3SD4dPxxNRpMgi3VopFOQw9FoMjoKM0hexBCPI3D8OccYrBDxOMW0hBy+IZ+liqx3",
-	"zV4Om9KVjLtLtr0KKnpnjU+b82EySQtkGE1sKp2rVRJvfOOT6d1NrBi1/1sO0pZ2V4kkksukbl/VU+U5",
-	"mN8Z76PRvtFa0jINLaSoh+oycNYP6HRu/XsJddeg58+2XL5Io33SbH6e2jaFumfH4bu1WjfZVv2iu4tW",
-	"uyF8UxTofdXU9TIo+/GFsdjHI32D9vNYSS0w1Wbw6V8QmBpGMrIWHuke6bF7L4DJMCE3L6dg3J8AAAD/",
-	"/6OHTQT5CAAA",
+	"vYvjmTNnzpkZP0BhtbMGDXvIH8BJkhoZKT79PPjhkQ6mJ+FBGchhgbJEggyM1Aj5RkQGhHeNIiwhZ2ow",
+	"A18sUMuQqpVRutGQH2bASxcSlWGcI0Hbto+RseQXQsl4RqFK4EPWIbHC+LIk62xVzWpbSFbWhP/+J6wg",
+	"h//GXSPjFd749DGuzUCVqJ1lNMVydovLkLqi4pmUmYcYp4rbxr0Cvt3s/nKn1i5yttvL1Vobe32DBQdC",
+	"X4nsgA4avZdzHOihHQA53Winj1NLVtyUm0Cm0dfBlgxqa+ZPvd3qd42zmTXUzxO+Bm1rZCxnkqPP6AtS",
+	"LpGG7wsUpWQU0pSClUbBCxSkShQ24Ilf0os1BGRQWdIBCEJWSIBs1+siDtpbKiaA59Z72+wOc5yeCFtt",
+	"cRuq/eq5zoAty3rmSBU4zCEGiBiwj0y379ur8rzt6BnWp7U7aKGIMpXdZXxsxPH5VFSWEkFl5oLlb+UD",
+	"puI6oFwE+nFSQyxkcI/kU/rhaDKaBFmsQyOdghyORpPRUehB8iIO8zgCx59zjMMVRj12MS0hh2/IZyki",
+	"653by2FTupBxd2zbq6Cid9b4tEEfJpO0SIbRxKLSuVol8cY3PpneXWTFqP3f5iBta3dSJJFcJnX7qp4q",
+	"z8H8zngfjfaN1pKWqWkhRT0Ul4GzfkCnc+vfS6i7Bj1/tuXyRRrtk2bzM9W2aah7dhy+W6l1kW3VL7p7",
+	"tNoN4ZuiQO+rpq6XQdmPLxyLfTzSt2g/j5XUAlNsBp/+BYGpYSQja+GR7pEeq/cGMBkm5OZxCsb9CQAA",
+	"//8EOn3rAQkAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	rider "rider-service/internal/generated/schema"
 )
 
@@ -15,21 +13,28 @@ func (h *RideImpl) GetOrders(w http.ResponseWriter, r *http.Request, params ride
 		return
 	}
 
-	mockOrders := make([]rider.Order, 0, 1)
-	mockOrders = append(mockOrders, rider.Order{
-		CompletedAt: nil,
-		CreatedAt:   openapi_types.Date{h.now()},
-		DropoffLocation: rider.Location{
-			Latitude:  1,
-			Longitude: 1,
-		},
-		Id: "",
-		PickupLocation: rider.Location{
-			Latitude:  1,
-			Longitude: 1,
-		},
-		TotalPrice: 0,
-	})
+	orders, err := h.orderService.List(r.Context(), params.XUserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
-	_ = json.NewEncoder(w).Encode(&mockOrders)
+	resultOrders := make([]rider.Order, 0, len(orders))
+	for _, order := range orders {
+		resultOrders = append(resultOrders, rider.Order{
+			CreatedAt: order.CreatedAt.String(),
+			DropoffLocation: rider.Location{
+				Latitude:  order.DropoffLocation.Latitude,
+				Longitude: order.DropoffLocation.Longitude,
+			},
+			Id: order.ID,
+			PickupLocation: rider.Location{
+				Latitude:  order.PickupLocation.Latitude,
+				Longitude: order.PickupLocation.Longitude,
+			},
+			TotalPrice: order.TotalPrice,
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(&orders)
 }
