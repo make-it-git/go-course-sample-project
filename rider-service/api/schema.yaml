@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Ride Order API
+  description: An API for ordering taxis
+  version: 1.0.0
+
+components:
+  parameters:
+    X-User-ID:
+      in: header
+      name: X-User-ID
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    CreateOrder:
+      type: object
+      required:
+        - idempotency_key
+        - pickup_location
+        - dropoff_location
+      properties:
+        idempotency_key:
+          type: string
+        pickup_location:
+          $ref: '#/components/schemas/Location'
+        dropoff_location:
+          $ref: '#/components/schemas/Location'
+    Order:
+      type: object
+      required:
+        - id
+        - pickup_location
+        - dropoff_location
+        - created_at
+        - total_price
+      properties:
+        id:
+          type: string
+          description: The ID of the ride order
+        pickup_location:
+          $ref: '#/components/schemas/Location'
+        dropoff_location:
+          $ref: '#/components/schemas/Location'
+        created_at:
+          type: string
+          format: date
+          description: The date and time the ride order was created
+        completed_at:
+          type: string
+          format: date
+          description: The date and time the ride order was completed
+        total_price:
+          type: integer
+          description: The total price of the ride order
+    Location:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+paths:
+  /orders:
+    post:
+      summary: Create a ride order
+      parameters:
+        - $ref: '#/components/parameters/X-User-ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrder'
+      responses:
+        201:
+          description: Ride order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        400:
+          description: Ride order request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: Get a list of ride orders
+      parameters:
+        - $ref: '#/components/parameters/X-User-ID'
+      responses:
+        200:
+          description: List of ride orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
