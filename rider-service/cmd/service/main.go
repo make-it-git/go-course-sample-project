@@ -10,15 +10,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"rider-service/internal/config"
 	"rider-service/internal/db/repository"
+	driver_order "rider-service/internal/generated/proto/driver.order"
 	rider "rider-service/internal/generated/schema"
 	"rider-service/internal/handlers"
 	"rider-service/internal/logger"
 	"rider-service/internal/now_time"
+	"rider-service/internal/services/driver_sender"
 	"rider-service/internal/services/order"
 	"rider-service/internal/services/price_estimator"
 )
@@ -32,16 +36,28 @@ func main() {
 	}
 
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, cfg.DatabaseUrl)
+	conn, err := pgxpool.New(ctx, cfg.DatabaseUrl)
 	if err != nil {
 		log.WithError(err, "database connect")
 		os.Exit(1)
 	}
-	defer conn.Close(ctx)
+	defer conn.Close()
+
+	grpcConn, err := grpc.DialContext(
+		context.Background(),
+		cfg.DriverServiceLocation,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.WithError(err, "grpc connect")
+		os.Exit(1)
+	}
+	grcpClient := driver_order.NewOrderClient(grpcConn)
+	driverSenderService := driver_sender.NewDriverSenderService(grcpClient)
 
 	priceEstimator := price_estimator.NewPriceEstimatorService()
 	orderRepository := repository.NewOrderRepository(conn)
-	orderService := order.NewOrderService(orderRepository, priceEstimator, now_time.Get)
+	orderService := order.NewOrderService(orderRepository, priceEstimator, now_time.Get, driverSenderService)
 
 	handle := handlers.New(log, now_time.Get, orderService)
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type OrderRepository interface {
@@ -13,12 +14,12 @@ type OrderRepository interface {
 	CreateAndGetID(ctx context.Context, order *OrderModel) (string, error)
 }
 
-func NewOrderRepository(conn *pgx.Conn) OrderRepository {
+func NewOrderRepository(conn *pgxpool.Pool) OrderRepository {
 	return &OrderRepositoryImpl{conn: conn}
 }
 
 type OrderRepositoryImpl struct {
-	conn *pgx.Conn
+	conn *pgxpool.Pool
 }
 
 func (r *OrderRepositoryImpl) GetByID(ctx context.Context, id string) (*OrderModel, error) {

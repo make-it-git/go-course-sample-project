@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package="driver.order";
+
+import "google/protobuf/timestamp.proto";
+
+service Order {
+  rpc StartOrder(StartOrderRequest) returns (StartOrderResponse) {}
+}
+
+message StartOrderRequest {
+  string id = 1;
+  google.protobuf.Timestamp createdAt = 2;
+  Location pointA = 3;
+  Location pointB = 4;
+  int64 userID = 5;
+}
+
+message Location {
+  float latitude = 1;
+  float longitude = 2;
+}
+
+message StartOrderResponse {
+  optional int64 driverId = 1;
+};

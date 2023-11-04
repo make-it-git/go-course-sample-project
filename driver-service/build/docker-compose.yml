@@ -1,7 +1,7 @@
 version: "3.9"
 
 networks:
-  rider:
+  driver:
 
 services:
   postgres:
@@ -11,10 +11,10 @@ services:
       POSTGRES_PASSWORD: "postgres"
       POSTGRES_DB: "postgres"
     volumes:
-      - rider-service-pg-volume:/var/lib/postgresql/data
-    container_name: rider-service-postgres
+      - driver-service-pg-volume:/var/lib/postgresql/data
     networks:
-      - rider
+      - driver
+    container_name: driver-service-postgres
   pgbouncer:
     image: bitnami/pgbouncer:1.21.0
     environment:
@@ -26,10 +26,10 @@ services:
       PGBOUNCER_PORT: "6432"
       PGBOUNCER_IGNORE_STARTUP_PARAMETERS: "extra_float_digits"
     ports:
-      - "6432:6432"
+      - "6433:6432"
     networks:
-      - rider
-    container_name: rider-service-pgbouncer
+      - driver
+    container_name: driver-service-pgbouncer
 
 volumes:
-  rider-service-pg-volume:
+  driver-service-pg-volume:

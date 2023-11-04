@@ -7,16 +7,18 @@ import (
 
 	"rider-service/internal/db/repository"
 	"rider-service/internal/now_time"
+	"rider-service/internal/services/driver_sender"
 )
 
 type OrderService struct {
-	repo           OrderRepository
-	now            now_time.NowType
-	priceEstimator RidePriceEstimator
+	repo                OrderRepository
+	now                 now_time.NowType
+	priceEstimator      RidePriceEstimator
+	driverSenderService DriverSenderService
 }
 
-func NewOrderService(repo OrderRepository, priceEstimator RidePriceEstimator, now now_time.NowType) OrderService {
-	return OrderService{repo: repo, priceEstimator: priceEstimator, now: now}
+func NewOrderService(repo OrderRepository, priceEstimator RidePriceEstimator, now now_time.NowType, driverSenderService DriverSenderService) OrderService {
+	return OrderService{repo: repo, priceEstimator: priceEstimator, now: now, driverSenderService: driverSenderService}
 }
 
 func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*OrderModel, error) {
@@ -39,8 +41,9 @@ func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*Ord
 		Latitude:  orderCreate.DropoffLocation.Latitude,
 		Longitude: orderCreate.DropoffLocation.Longitude,
 	}
+	now := s.now()
 	order := repository.OrderModel{
-		CreatedAt:       s.now(),
+		CreatedAt:       now,
 		PickupLocation:  pickupLocation,
 		ID:              uuid.New().String(),
 		DropoffLocation: dropoffLocation,
@@ -49,6 +52,23 @@ func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*Ord
 		UserID:          orderCreate.UserID,
 	}
 	id, err := s.repo.CreateAndGetID(ctx, &order)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.driverSenderService.SendToDriver(ctx, driver_sender.Order{
+		ID:        id,
+		CreatedAt: now,
+		PickupLocation: driver_sender.Location{
+			Latitude:  orderCreate.PickupLocation.Latitude,
+			Longitude: orderCreate.PickupLocation.Longitude,
+		},
+		DropoffLocation: driver_sender.Location{
+			Latitude:  orderCreate.DropoffLocation.Latitude,
+			Longitude: orderCreate.DropoffLocation.Longitude,
+		},
+		UserID: int64(orderCreate.UserID),
+	})
 	if err != nil {
 		return nil, err
 	}
