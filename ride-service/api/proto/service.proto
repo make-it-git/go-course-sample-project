@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option go_package="ride.order";
+
+import "google/protobuf/timestamp.proto";
+
+service Ride {
+  rpc TrackOrder(stream TrackOrderRequest) returns (TrackOrderResponse) {}
+  rpc GetTrack(GetTrackRequest) returns (GetTrackResponse) {}
+}
+
+message TrackOrderRequest {
+  string id = 1;
+  google.protobuf.Timestamp createdAt = 2;
+  float latitude = 3;
+  float longitude = 4;
+}
+
+message TrackOrderResponse {
+}
+
+message GetTrackRequest {
+  string id = 1;
+}
+
+message GetTrackResponse {
+  repeated TrackItem track = 1;
+}
+
+message TrackItem {
+  google.protobuf.Timestamp createdAt = 1;
+  float latitude = 2;
+  float longitude = 3;
+}
