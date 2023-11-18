@@ -2,11 +2,27 @@ package order
 
 import (
 	"context"
+	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"driver-service/internal/db/repository"
 	"driver-service/internal/logger"
 )
+
+var orderCounter *prometheus.CounterVec
+
+func init() {
+	orderCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "order_create_count",
+			Help: "No of orders created",
+		},
+		[]string{"assignAttempts"},
+	)
+	prometheus.MustRegister(orderCounter)
+}
 
 type OrderService struct {
 	repo         OrderRepository
@@ -43,6 +59,7 @@ func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*Ord
 	)
 	if err == nil {
 		order.DriverID = &driverID
+		orderCounter.With(prometheus.Labels{"assignAttempts": "0"}).Inc()
 	}
 
 	err = s.repo.Create(ctx, &order)
@@ -55,6 +72,7 @@ func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*Ord
 			attempts := 0
 			for attempts < 10 {
 				attempts++
+				orderCounter.With(prometheus.Labels{"assignAttempts": strconv.Itoa(attempts)}).Inc()
 				time.Sleep(time.Second * 1)
 				driverID, err := s.driverSearch.FindDriver(
 					ctx,

@@ -1,7 +1,9 @@
 version: "3.9"
 
 networks:
-  driver:
+  common:
+    external: true
+    name: common
 
 services:
   postgres:
@@ -13,12 +15,12 @@ services:
     volumes:
       - driver-service-pg-volume:/var/lib/postgresql/data
     networks:
-      - driver
+      - common
     container_name: driver-service-postgres
   pgbouncer:
     image: bitnami/pgbouncer:1.21.0
     environment:
-      POSTGRESQL_HOST: "postgres"
+      POSTGRESQL_HOST: "driver-service-postgres"
       POSTGRESQL_PORT: "5432"
       POSTGRESQL_USERNAME: "postgres"
       POSTGRESQL_PASSWORD: "postgres"
@@ -28,8 +30,24 @@ services:
     ports:
       - "6433:6432"
     networks:
-      - driver
+      - common
     container_name: driver-service-pgbouncer
+  app:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    environment:
+      LISTEN_ADDR: "0.0.0.0"
+      PROM_ADDR: "0.0.0.0"
+      PROM_PORT: "9090"
+      BROKER_URL: "redis-broker:6379"
+      DATABASE_URL: "postgres://postgres:postgres@driver-service-pgbouncer:6432/postgres"
+    networks:
+      - common
+    labels:
+      logging: promtail
+      prometheus-job: true
+    container_name: driver-service
 
 volumes:
   driver-service-pg-volume:

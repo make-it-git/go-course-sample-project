@@ -1,20 +1,28 @@
 version: "3.9"
 
 networks:
-  ride:
+  common:
+    external: true
+    name: common
 
 services:
   redis:
     image: redis:6
     networks:
-      - ride
+      - common
     ports:
       - "6379:6379"
     container_name: ride-service-redis
-  redis-broker:
-    image: redis:6
-    networks:
-      - ride
+  app:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    environment:
+      LISTEN_ADDR: "0.0.0.0"
+      REDIS_URL: "ride-service-redis:6379"
+      BROKER_URL: "redis-broker:6379"
     ports:
-      - "16379:6379"
-    container_name: ride-service-redis-broker
+      - "8002:8002"
+    networks:
+      - common
+    container_name: ride-service

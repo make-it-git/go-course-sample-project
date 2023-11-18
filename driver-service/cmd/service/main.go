@@ -3,12 +3,16 @@ package main
 import (
 	"context"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -60,12 +64,29 @@ func main() {
 
 	handler := handlers.NewHandler(orderService)
 
-	s := grpc.NewServer(grpc.UnaryInterceptor(loggingInterceptor(log, cfg)))
+	srvMetrics := grpcprom.NewServerMetrics(
+		grpcprom.WithServerHandlingTimeHistogram(
+			grpcprom.WithHistogramBuckets([]float64{0.05, 0.1, 0.5, 1, 2, 3, 5}),
+		),
+	)
+	prometheus.MustRegister(srvMetrics)
+
+	s := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			loggingInterceptor(log, cfg),
+			srvMetrics.UnaryServerInterceptor(),
+		),
+		grpc.ChainStreamInterceptor(
+			srvMetrics.StreamServerInterceptor(),
+		),
+	)
 	reflection.Register(s)
 	driver_order.RegisterOrderServer(s, handler)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
 		log.Info("Listen", "addr", cfg.ListenAddrAndPort())
@@ -78,6 +99,13 @@ func main() {
 		if err := s.Serve(listener); err != nil {
 			log.WithError(err, "listen")
 			close(done)
+		}
+	}()
+
+	go func() {
+		err := http.ListenAndServe(cfg.PromListenAddrAndPort(), nil)
+		if err != nil {
+			log.WithError(err, "prom listen")
 		}
 	}()
 

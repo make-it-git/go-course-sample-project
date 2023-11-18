@@ -14,10 +14,6 @@ migrate:
 	cd internal/db/migrations && tern migrate
 
 up:
-	docker compose -f build/docker-compose.yml --project-name driver up -d
 	DATABASE_URL="postgres://postgres:postgres@localhost:6433/postgres" \
 	GRPC_GO_LOG_VERBOSITY_LEVEL=99 GRPC_GO_LOG_SEVERITY_LEVEL=info \
 	go run cmd/service/main.go
-
-stop:
-	docker compose -f build/docker-compose.yml stop

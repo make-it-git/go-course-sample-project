@@ -12,6 +12,8 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/yarlson/chiprom"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -69,14 +71,19 @@ func main() {
 	}
 	r.Use(middleware.OapiRequestValidator(swagger))
 	r.Use(chimiddleware.Recoverer)
+	r.Use(chiprom.NewMiddleware("rider-service"))
 	if cfg.Env == config.LocalEnv {
 		r.Use(chimiddleware.Logger)
 	}
 
+	baseRouter := chi.NewRouter()
+	baseRouter.Handle("/metrics", promhttp.Handler())
+
 	rider.HandlerFromMux(handle, r)
+	baseRouter.Mount("/", r)
 
 	s := &http.Server{
-		Handler: r,
+		Handler: baseRouter,
 		Addr:    cfg.ListenAddrAndPort(),
 	}
 
