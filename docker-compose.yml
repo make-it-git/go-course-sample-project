@@ -60,3 +60,15 @@ services:
       - "9090:9090"
     networks:
       - common
+  jaeger:
+    image: jaegertracing/all-in-one:1.51
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    container_name: jaeger
+    networks:
+      - common
+#    logging:
+#      driver: none

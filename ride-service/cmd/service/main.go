@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"os/signal"
@@ -17,6 +18,7 @@ import (
 	ride_order "ride-service/internal/generated/proto/ride.order"
 	"ride-service/internal/handlers"
 	"ride-service/internal/logger"
+	"ride-service/internal/otel"
 	"ride-service/internal/services/ride"
 )
 
@@ -60,6 +62,16 @@ func main() {
 	s := grpc.NewServer()
 	reflection.Register(s)
 	ride_order.RegisterRideServer(s, handler)
+
+	serviceName := "ride-service"
+	serviceVersion := os.Getenv("SERVICE_VERSION")
+	otelShutdown, err := otel.SetupOTelSDK(ctx, serviceName, serviceVersion, cfg.Env == config.ProdEnv)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

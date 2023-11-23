@@ -7,9 +7,13 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"driver-service/internal/db/repository"
 	"driver-service/internal/logger"
+	"driver-service/internal/otel"
 )
 
 type LocationUpdater struct {
@@ -55,13 +59,32 @@ func (l LocationUpdater) Run(ctx context.Context) {
 						l.log.WithError(err, "json marshal")
 						continue
 					}
+					var span *trace.Span
+					spanContext, err := otel.NewSpanContext(e.TraceID, e.SpanID)
+					if err != nil {
+						l.log.WithError(err, "create span context")
+					} else {
+						ctx = trace.ContextWithSpanContext(ctx, spanContext)
+						spanCtx, newSpan := otel.GetTracer().Start(ctx, "updateCurrentLocation", trace.WithAttributes(attribute.String("orderID", e.Id)))
+						ctx = spanCtx
+						span = &newSpan
+						(*span).AddEvent("update location")
+					}
 					err = l.repository.UpdateCurrentLocation(ctx, e.Id, repository.Location{
 						Latitude:  e.Latitude,
 						Longitude: e.Longitude,
 					})
 					if err != nil {
+						if span != nil {
+							(*span).SetStatus(codes.Error, "failed update location")
+							(*span).RecordError(err)
+							(*span).End()
+						}
 						l.log.WithError(err, "update location")
 						continue
+					}
+					if span != nil {
+						(*span).End()
 					}
 				}
 			}

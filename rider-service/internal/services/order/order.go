@@ -7,6 +7,7 @@ import (
 
 	"rider-service/internal/db/repository"
 	"rider-service/internal/now_time"
+	otel2 "rider-service/internal/otel"
 	"rider-service/internal/services/driver_sender"
 )
 
@@ -22,6 +23,9 @@ func NewOrderService(repo OrderRepository, priceEstimator RidePriceEstimator, no
 }
 
 func (s OrderService) Create(ctx context.Context, orderCreate OrderCreate) (*OrderModel, error) {
+	ctx, span := otel2.GetTracer().Start(ctx, "serviceCreateOrder")
+	defer span.End()
+
 	price, err := s.priceEstimator.Estimate(
 		ctx,
 		orderCreate.PickupLocation.Latitude,

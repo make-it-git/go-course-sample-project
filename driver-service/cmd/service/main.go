@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -22,6 +24,7 @@ import (
 	driver_order "driver-service/internal/generated/proto/driver.order"
 	"driver-service/internal/handlers"
 	"driver-service/internal/logger"
+	"driver-service/internal/otel"
 	"driver-service/internal/services/driver_search"
 	"driver-service/internal/services/location_updater"
 	"driver-service/internal/services/order"
@@ -75,13 +78,25 @@ func main() {
 		grpc.ChainUnaryInterceptor(
 			loggingInterceptor(log, cfg),
 			srvMetrics.UnaryServerInterceptor(),
+			otelgrpc.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			srvMetrics.StreamServerInterceptor(),
+			otelgrpc.StreamServerInterceptor(),
 		),
 	)
 	reflection.Register(s)
 	driver_order.RegisterOrderServer(s, handler)
+
+	serviceName := "driver-service"
+	serviceVersion := os.Getenv("SERVICE_VERSION")
+	otelShutdown, err := otel.SetupOTelSDK(ctx, serviceName, serviceVersion, cfg.Env == config.ProdEnv)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

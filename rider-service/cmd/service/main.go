@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/riandyrn/otelchi"
 	"github.com/yarlson/chiprom"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -24,6 +27,7 @@ import (
 	"rider-service/internal/handlers"
 	"rider-service/internal/logger"
 	"rider-service/internal/now_time"
+	"rider-service/internal/otel"
 	"rider-service/internal/services/driver_sender"
 	"rider-service/internal/services/order"
 	"rider-service/internal/services/price_estimator"
@@ -37,7 +41,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serviceName := "rider-service"
+	serviceVersion := os.Getenv("SERVICE_VERSION")
+	otelShutdown, err := otel.SetupOTelSDK(ctx, serviceName, serviceVersion, cfg.Env == config.ProdEnv)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+
 	conn, err := pgxpool.New(ctx, cfg.DatabaseUrl)
 	if err != nil {
 		log.WithError(err, "database connect")
@@ -49,6 +65,8 @@ func main() {
 		context.Background(),
 		cfg.DriverServiceLocation,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
 	if err != nil {
 		log.WithError(err, "grpc connect")
@@ -71,7 +89,8 @@ func main() {
 	}
 	r.Use(middleware.OapiRequestValidator(swagger))
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chiprom.NewMiddleware("rider-service"))
+	r.Use(chiprom.NewMiddleware(serviceName))
+	r.Use(otelchi.Middleware(serviceName, otelchi.WithChiRoutes(r)))
 	if cfg.Env == config.LocalEnv {
 		r.Use(chimiddleware.Logger)
 	}
@@ -87,18 +106,15 @@ func main() {
 		Addr:    cfg.ListenAddrAndPort(),
 	}
 
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
 	go func() {
 		log.Info("Listen", "addr", cfg.ListenAddrAndPort())
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.WithError(err, "listen")
-			close(done)
+			stop()
 		}
 	}()
 
-	<-done
+	<-ctx.Done()
 	log.Info("Listen stopped")
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

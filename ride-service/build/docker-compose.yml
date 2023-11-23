@@ -21,6 +21,8 @@ services:
       LISTEN_ADDR: "0.0.0.0"
       REDIS_URL: "ride-service-redis:6379"
       BROKER_URL: "redis-broker:6379"
+      JAEGER_ENDPOINT_URL: "http://jaeger:14268/api/traces"
+      ENV: "prod"
     ports:
       - "8002:8002"
     networks:

@@ -41,6 +41,8 @@ services:
       LISTEN_PORT: "9090"
       DRIVER_SERVICE_LOCATION: "driver-service:8001"
       DATABASE_URL: "postgres://postgres:postgres@rider-service-pgbouncer:6432/postgres"
+      JAEGER_ENDPOINT_URL: "http://jaeger:14268/api/traces"
+      ENV: "prod"
     ports:
       - "8000:9090"
     networks:

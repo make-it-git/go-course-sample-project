@@ -42,6 +42,8 @@ services:
       PROM_PORT: "9090"
       BROKER_URL: "redis-broker:6379"
       DATABASE_URL: "postgres://postgres:postgres@driver-service-pgbouncer:6432/postgres"
+      JAEGER_ENDPOINT_URL: "http://jaeger:14268/api/traces"
+      ENV: "prod"
     networks:
       - common
     labels:

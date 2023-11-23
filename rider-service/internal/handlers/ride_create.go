@@ -3,8 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	rider "rider-service/internal/generated/schema"
+	otel2 "rider-service/internal/otel"
 	"rider-service/internal/services/order"
 )
 
@@ -19,7 +25,10 @@ func (h *RideImpl) PostOrders(w http.ResponseWriter, r *http.Request, params rid
 		return
 	}
 
-	createdOrder, err := h.orderService.Create(r.Context(), order.OrderCreate{
+	ctx, span := otel2.GetTracer().Start(r.Context(), "createOrder", trace.WithAttributes(attribute.String("userID", strconv.Itoa(params.XUserID))))
+	defer span.End()
+
+	createdOrder, err := h.orderService.Create(ctx, order.OrderCreate{
 		PickupLocation: order.Location{
 			Latitude:  orderData.PickupLocation.Latitude,
 			Longitude: orderData.PickupLocation.Longitude,
@@ -33,6 +42,8 @@ func (h *RideImpl) PostOrders(w http.ResponseWriter, r *http.Request, params rid
 	})
 
 	if err != nil {
+		span.SetStatus(codes.Error, "failed create order")
+		span.RecordError(err)
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
